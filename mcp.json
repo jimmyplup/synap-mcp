@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "synap": {
+      "url": "https://pool.linkrra.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${SYNAP_API_KEY}"
+      },
+      "description": "Synap by Linkrra — OpenAI-compatible inference on self-hosted open models. list_models / get_model / estimate_cost are free and need no key; chat_completion bills per token to SYNAP_API_KEY. Get a key at https://synap.linkrra.com"
+    }
+  }
+}
