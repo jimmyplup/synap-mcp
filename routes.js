@@ -29,12 +29,33 @@ function selfBase(req) {
   return `http://127.0.0.1:${port}`;
 }
 
-const SERVER_VERSION = '1.1.0';
+const SERVER_VERSION = '1.2.0';
 
 // Protocol revisions this server can speak. It uses no feature that differs
 // between them (tools only, plain JSON responses), so it answers in whichever
 // one the client asked for and falls back to the newest it knows.
-const SUPPORTED_PROTOCOLS = ['2025-06-18', '2025-03-26', '2024-11-05'];
+const SUPPORTED_PROTOCOLS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
+
+/* T-960, 2026-10-16: MCP 2026-07-28 (the current revision) is stateless — no
+ * `initialize` handshake. Every request carries its version in
+ * params._meta["io.modelcontextprotocol/protocolVersion"], mirrored in the
+ * MCP-Protocol-Version header; servers MUST answer `server/discover`, every
+ * result carries `resultType`, and list results carry `ttlMs` + `cacheScope`.
+ * Read from https://modelcontextprotocol.io/specification/2026-07-28/changelog
+ * and the published schema.json, 2026-10-16.
+ *
+ * This server is "dual-era" in the spec's own terms (lifecycle, Backward
+ * Compatibility): a request that declares a modern version gets modern
+ * semantics; anything else — an `initialize`, or a request with no `_meta`
+ * version — gets exactly the legacy behaviour it had before. */
+const MODERN_PROTOCOLS = ['2026-07-28'];
+const ALL_PROTOCOLS = [...MODERN_PROTOCOLS, ...SUPPORTED_PROTOCOLS];
+const META_VERSION = 'io.modelcontextprotocol/protocolVersion';
+const META_SERVER_INFO = 'io.modelcontextprotocol/serverInfo';
+// tools/list is the same for every caller (no per-key tools), so a shared
+// cache may hold it; an hour matches the A2A card's Cache-Control.
+const LIST_TTL_MS = 3600 * 1000;
+const SERVER_INFO = { name: 'synap', title: 'Synap by Linkrra', version: SERVER_VERSION, websiteUrl: 'https://synap.linkrra.com' };
 
 const INSTRUCTIONS =
   "Synap is Linkrra's OpenAI-compatible inference API for open models (https://synap.linkrra.com). " +
@@ -283,8 +304,89 @@ function rpcResult(id, result) {
   return { jsonrpc: '2.0', id, result };
 }
 
-function rpcError(id, code, message) {
-  return { jsonrpc: '2.0', id, error: { code, message } };
+function rpcError(id, code, message, data) {
+  return { jsonrpc: '2.0', id, error: data === undefined ? { code, message } : { code, message, data } };
+}
+
+/** The protocol version a request declares in its _meta, or undefined (legacy). */
+function declaredVersion(msg) {
+  const meta = msg && msg.params && msg.params._meta;
+  const v = meta && meta[META_VERSION];
+  return typeof v === 'string' ? v : undefined;
+}
+
+/** Decode the spec's Base64 sentinel (`=?base64?...?=`) used for non-ASCII header values. */
+function decodeHeaderValue(v) {
+  const m = /^=\?base64\?(.*)\?=$/.exec(v);
+  return m ? Buffer.from(m[1], 'base64').toString('utf8') : v;
+}
+
+/**
+ * Header-body validation for a modern request (streamable-http, Server
+ * Validation). Returns an error message, or null when the headers agree.
+ */
+function headerMismatch(req, msg, version) {
+  const hv = req.get('mcp-protocol-version');
+  if (!hv) return 'Missing required header: MCP-Protocol-Version';
+  if (hv !== version) return `Header mismatch: MCP-Protocol-Version header value '${hv}' does not match body value '${version}'`;
+  const hm = req.get('mcp-method');
+  if (!hm) return 'Missing required header: Mcp-Method';
+  if (hm !== msg.method) return `Header mismatch: Mcp-Method header value '${hm}' does not match body value '${msg.method}'`;
+  if (msg.method === 'tools/call') {
+    const raw = req.get('mcp-name');
+    if (!raw) return 'Missing required header: Mcp-Name';
+    const name = decodeHeaderValue(raw);
+    const bodyName = msg.params && msg.params.name;
+    if (name !== bodyName) return `Header mismatch: Mcp-Name header value '${name}' does not match body value '${bodyName}'`;
+  }
+  return null;
+}
+
+function modernResult(id, result) {
+  return rpcResult(id, { ...result, resultType: 'complete', _meta: { [META_SERVER_INFO]: SERVER_INFO } });
+}
+
+/** Run one tool call and shape the MCP result (shared by both eras). */
+async function toolCallResult(req, params) {
+  const { name, arguments: args } = params || {};
+  const tool = TOOLS.find((t) => t.name === name);
+  if (!tool) return null;
+  const result = await callTool(req, name, args || {});
+  return { content: [{ type: 'text', text: result.body }], isError: result.status >= 400 };
+}
+
+/**
+ * MCP 2026-07-28 request handling. Called only for a request that declared a
+ * version in _meta.
+ */
+async function handleModern(req, res, msg, version) {
+  if (!MODERN_PROTOCOLS.includes(version)) {
+    return res.status(400).json(rpcError(msg.id, -32022, `Unsupported protocol version: ${version}`,
+      { requested: version, supported: ALL_PROTOCOLS }));
+  }
+  const mismatch = headerMismatch(req, msg, version);
+  if (mismatch) return res.status(400).json(rpcError(msg.id, -32020, mismatch));
+
+  switch (msg.method) {
+    case 'server/discover':
+      return res.json(modernResult(msg.id, {
+        supportedVersions: ALL_PROTOCOLS,
+        capabilities: { tools: {} },
+        instructions: INSTRUCTIONS,
+        ttlMs: LIST_TTL_MS,
+        cacheScope: 'public',
+      }));
+    case 'tools/list':
+      return res.json(modernResult(msg.id, { tools: TOOLS, ttlMs: LIST_TTL_MS, cacheScope: 'public' }));
+    case 'tools/call': {
+      const out = await toolCallResult(req, msg.params);
+      if (!out) return res.json(rpcError(msg.id, -32602, `Unknown tool: ${msg.params && msg.params.name}`));
+      return res.json(modernResult(msg.id, out));
+    }
+    default:
+      // initialize and ping no longer exist in this revision.
+      return res.status(404).json(rpcError(msg.id, -32601, `Method not found: ${msg.method}`));
+  }
 }
 
 /**
@@ -315,6 +417,11 @@ function createMcpRouter() {
     }
 
     try {
+      const version = declaredVersion(msg);
+      if (version !== undefined && msg.method !== 'initialize') {
+        return await handleModern(req, res, msg, version);
+      }
+
       switch (msg.method) {
         case 'initialize': {
           const asked = msg.params && msg.params.protocolVersion;
@@ -322,7 +429,7 @@ function createMcpRouter() {
             rpcResult(msg.id, {
               protocolVersion: SUPPORTED_PROTOCOLS.includes(asked) ? asked : PROTOCOL_VERSION,
               capabilities: { tools: {} },
-              serverInfo: { name: 'synap', title: 'Synap by Linkrra', version: SERVER_VERSION, websiteUrl: 'https://synap.linkrra.com' },
+              serverInfo: SERVER_INFO,
               instructions: INSTRUCTIONS,
             })
           );
@@ -335,19 +442,25 @@ function createMcpRouter() {
           return res.json(rpcResult(msg.id, { tools: TOOLS }));
 
         case 'tools/call': {
-          const { name, arguments: args } = msg.params || {};
-          const tool = TOOLS.find((t) => t.name === name);
-          if (!tool) {
-            return res.json(rpcError(msg.id, -32602, `Unknown tool: ${name}`));
+          const out = await toolCallResult(req, msg.params);
+          if (!out) {
+            return res.json(rpcError(msg.id, -32602, `Unknown tool: ${msg.params && msg.params.name}`));
           }
-          const result = await callTool(req, name, args || {});
-          return res.json(
-            rpcResult(msg.id, {
-              content: [{ type: 'text', text: result.body }],
-              isError: result.status >= 400,
-            })
-          );
+          return res.json(rpcResult(msg.id, out));
         }
+
+        // A legacy-era client that probes with discover (no _meta version)
+        // still learns what we speak.
+        case 'server/discover':
+          return res.json(rpcResult(msg.id, {
+            supportedVersions: ALL_PROTOCOLS,
+            capabilities: { tools: {} },
+            instructions: INSTRUCTIONS,
+            ttlMs: LIST_TTL_MS,
+            cacheScope: 'public',
+            resultType: 'complete',
+            _meta: { [META_SERVER_INFO]: SERVER_INFO },
+          }));
 
         default:
           return res.json(rpcError(msg.id, -32601, `Method not found: ${msg.method}`));
@@ -360,4 +473,4 @@ function createMcpRouter() {
   return router;
 }
 
-module.exports = { createMcpRouter, TOOLS, PROTOCOL_VERSION, SERVER_VERSION };
+module.exports = { createMcpRouter, TOOLS, PROTOCOL_VERSION, SERVER_VERSION, ALL_PROTOCOLS, MODERN_PROTOCOLS };

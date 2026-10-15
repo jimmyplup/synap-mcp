@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "synap",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "OpenAI-compatible inference on self-hosted open models via MCP: list models and live prices, estimate a request's cost (free, no key), and run chat completions billed per token to your Synap API key.",
   "author": {
     "name": "Linkrra",

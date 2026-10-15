@@ -1,10 +1,11 @@
 {
   "name": "synap-mcp",
-  "version": "1.1.0",
-  "description": "Synap by Linkrra — MCP (Model Context Protocol) server over Synap's OpenAI-compatible inference API. Streamable HTTP, no SDK dependency.",
+  "version": "1.2.0",
+  "description": "Synap by Linkrra - MCP server over Synap's OpenAI-compatible inference API. Hosted Streamable HTTP endpoint plus a zero-dependency stdio bridge (npx synap-mcp). MCP 2026-07-28 and 2025-11-25 and earlier.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node test/test-bridge.js"
   },
   "license": "Apache-2.0",
   "repository": {
@@ -13,5 +14,29 @@
   },
   "dependencies": {
     "express": "^4.22.3"
-  }
+  },
+  "mcpName": "com.linkrra/synap",
+  "bin": {
+    "synap-mcp": "bin/synap-mcp.js"
+  },
+  "files": [
+    "bin/",
+    "routes.js",
+    "server.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "homepage": "https://synap.linkrra.com",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "llm",
+    "inference",
+    "openai-compatible",
+    "synap",
+    "linkrra"
+  ]
 }
