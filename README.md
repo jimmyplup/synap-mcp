@@ -71,6 +71,8 @@ nothing is charged.
 - **x402, no account.** An agent with a USDC wallet on Base can pay per call over plain HTTP at
   `POST https://pool.linkrra.com/api/billing/x402/chat/completions`. An unpaid request
   returns `402` with the payment terms. This route is part of the REST API, not an MCP tool.
+  Its settlement is independently verified on
+  [PayAPI Market](https://payapi.market/api/synap-by-linkrra).
 
 ## Protocol
 
