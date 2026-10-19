@@ -45,6 +45,7 @@ The file contains no credentials. goose reads the key from `LINKRRA_API_KEY` or 
 | `qwen3-coder-30b` | 32,768 | 0.0675 | 0.27 | Coding sessions (recommended default) |
 | `qwen/qwen3-30b-a3b` | 65,536 | 0.0585 | 0.2438 | General chat and agent work, longer context |
 | `gemma-4-26b-a4b-it` | 131,072 | 0.04 | 0.21 | Long files and documents |
+| `gpt-oss-20b` | 32,768 | 0.017 | 0.085 | Cheapest per token; reasoning model (see note below) |
 
 Prices are also declared per token in the JSON, so goose's cost tracking shows real numbers.
 Live prices: `https://pool.linkrra.com/v1/models?format=openrouter`.
@@ -56,13 +57,20 @@ Live prices: `https://pool.linkrra.com/v1/models?format=openrouter`.
 - **Streaming:** yes, including `stream_options.include_usage`
 - **Custom headers:** none required
 - **Model list:** static (`dynamic_models: false`). The plain `/v1/models` endpoint also lists models we resell from other providers. This file only lists models running on our own GPUs.
-- **Quantization:** models are served 4-bit quantized. Quality and speed differ from full-precision hosts.
+- **Quantization:** models are served 4-bit quantized (`gpt-oss-20b` in its native MXFP4). Quality and speed differ from full-precision hosts.
+- **Reasoning (`gpt-oss-20b`):** it spends output tokens thinking before it answers, and those tokens are
+  billed. A turn capped too low returns `content: null` with the budget consumed as `reasoning_tokens` —
+  measured here, 20 output tokens produced 17 reasoning tokens and no content. goose's own turns are not
+  capped that tightly and behave normally, but give it room if you set `max_tokens` by hand.
 - **Free tier:** `qwen3-coder-30b` only, 100,000 tokens/day. goose sends ~6-7K prompt tokens per turn (system prompt + tool list), so the free tier covers roughly a dozen turns a day.
 
 ## Verified
 
 Tested on 2026-10-19 with goose CLI 1.54.0 (`goose run --provider linkrra --with-builtin developer`).
 Each listed model called the `shell` tool and returned its output.
+
+`gpt-oss-20b` was added later the same day, after the same check, plus a 27,582-token prompt that
+returned the correct answer in 5.2 s — the long-prompt path had been the one that broke it.
 
 ## Troubleshooting
 

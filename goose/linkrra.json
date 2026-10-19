@@ -2,7 +2,7 @@
   "name": "linkrra",
   "engine": "openai",
   "display_name": "Linkrra (Synap)",
-  "description": "Synap by Linkrra: open-weight models (Qwen3 Coder, Qwen3, Gemma 4) served on Linkrra's own GPUs behind an OpenAI-compatible API, billed per token. Every listed model supports tool calling and streaming.",
+  "description": "Synap by Linkrra: open-weight models (Qwen3 Coder, Qwen3, Gemma 4, gpt-oss) served on Linkrra's own GPUs behind an OpenAI-compatible API, billed per token. Every listed model supports tool calling and streaming.",
   "api_key_env": "LINKRRA_API_KEY",
   "base_url": "https://pool.linkrra.com/v1/chat/completions",
   "requires_auth": true,
@@ -26,6 +26,12 @@
       "context_limit": 131072,
       "input_token_cost": 4e-08,
       "output_token_cost": 2.1e-07
+    },
+    {
+      "name": "gpt-oss-20b",
+      "context_limit": 32768,
+      "input_token_cost": 1.7e-08,
+      "output_token_cost": 8.5e-08
     }
   ],
   "model_doc_link": "https://github.com/jimmyplup/synap-mcp/tree/main/goose",
