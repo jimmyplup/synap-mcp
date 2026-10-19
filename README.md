@@ -64,6 +64,12 @@ nothing is charged.
 | `SYNAP_API_KEY` | Your Synap key, sent as `Authorization: Bearer`. Get one at https://synap.linkrra.com. |
 | `SYNAP_MCP_URL` | Optional. Overrides the endpoint (default `https://pool.linkrra.com/mcp`). |
 
+## Use it from goose
+
+A ready-made [goose](https://github.com/aaif-goose/goose) custom-provider file lives in [`goose/`](goose/).
+Download `goose/linkrra.json` into `~/.config/goose/custom_providers/`, set `LINKRRA_API_KEY`, and pick
+**Linkrra (Synap)** as the provider. Full setup steps and the model table: [goose/README.md](goose/README.md).
+
 ## Paying
 
 - **API key (MCP and REST).** Top up a Synap account by card or crypto. Each call is billed
