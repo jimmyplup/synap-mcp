@@ -1,43 +1,49 @@
 {
-  "name": "linkrra",
-  "engine": "openai",
-  "display_name": "Linkrra (Synap)",
-  "description": "Synap by Linkrra: open-weight models (Qwen3 Coder, Qwen3, Gemma 4, gpt-oss) served on Linkrra's own GPUs behind an OpenAI-compatible API, billed per token. Every listed model supports tool calling and streaming.",
-  "api_key_env": "LINKRRA_API_KEY",
-  "base_url": "https://pool.linkrra.com/v1/chat/completions",
-  "requires_auth": true,
-  "supports_streaming": true,
-  "dynamic_models": false,
-  "models": [
-    {
-      "name": "qwen3-coder-30b",
-      "context_limit": 32768,
-      "input_token_cost": 6.75e-08,
-      "output_token_cost": 2.7e-07
-    },
-    {
-      "name": "qwen/qwen3-30b-a3b",
-      "context_limit": 65536,
-      "input_token_cost": 5.8512e-08,
-      "output_token_cost": 2.438e-07
-    },
-    {
-      "name": "gemma-4-26b-a4b-it",
-      "context_limit": 131072,
-      "input_token_cost": 4e-08,
-      "output_token_cost": 2.1e-07
-    },
-    {
-      "name": "gpt-oss-20b",
-      "context_limit": 32768,
-      "input_token_cost": 1.7e-08,
-      "output_token_cost": 8.5e-08
-    }
-  ],
-  "model_doc_link": "https://github.com/jimmyplup/synap-mcp/tree/main/goose",
-  "setup_steps": [
-    "Sign in at https://synap.linkrra.com/ai/account.html and create an API key (qwen3-coder-30b has a free tier of 100,000 tokens/day)",
-    "Paste the key as LINKRRA_API_KEY (or export LINKRRA_API_KEY in your shell)",
-    "Pick a model: qwen3-coder-30b is the recommended default for coding sessions"
-  ]
+    "name": "linkrra",
+    "engine": "openai",
+    "display_name": "Linkrra (Synap)",
+    "description": "Synap by Linkrra: open-weight models (Qwen3 Coder, Qwen3, Qwen3 VL, Gemma 4, gpt-oss) served on Linkrra's own GPUs behind an OpenAI-compatible API, billed per token. Every listed model supports tool calling and streaming.",
+    "api_key_env": "LINKRRA_API_KEY",
+    "base_url": "https://pool.linkrra.com/v1/chat/completions",
+    "requires_auth": true,
+    "supports_streaming": true,
+    "dynamic_models": false,
+    "models": [
+        {
+            "name": "qwen3-coder-30b",
+            "context_limit": 98304,
+            "input_token_cost": 6.75e-08,
+            "output_token_cost": 2.7e-07
+        },
+        {
+            "name": "qwen/qwen3-30b-a3b",
+            "context_limit": 98304,
+            "input_token_cost": 5.8512e-08,
+            "output_token_cost": 2.438e-07
+        },
+        {
+            "name": "qwen/qwen3-vl-30b-a3b-instruct",
+            "context_limit": 65536,
+            "input_token_cost": 1.4e-07,
+            "output_token_cost": 5.7e-07
+        },
+        {
+            "name": "gemma-4-26b-a4b-it",
+            "context_limit": 131072,
+            "input_token_cost": 4e-08,
+            "output_token_cost": 2.1e-07
+        },
+        {
+            "name": "gpt-oss-20b",
+            "context_limit": 131072,
+            "input_token_cost": 1.7e-08,
+            "output_token_cost": 8.5e-08
+        }
+    ],
+    "model_doc_link": "https://github.com/jimmyplup/synap-mcp/tree/main/goose",
+    "setup_steps": [
+        "Sign in at https://synap.linkrra.com/ai/account.html and create an API key (qwen3-coder-30b has a free tier of 100,000 tokens/day)",
+        "Paste the key as LINKRRA_API_KEY (or export LINKRRA_API_KEY in your shell)",
+        "Pick a model: qwen3-coder-30b is the recommended default for coding sessions"
+    ]
 }
